@@ -1,3 +1,4 @@
+// 顯示語音對話的「逐字稿（transcript）」，包含歷史訊息 + 即時輸入 + AI 即時回應
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -21,10 +22,12 @@ const Transcript = ({ messages, currentMessage, currentUserMessage }: Transcript
       });
     }
   };
+  // 每次有新訊息 → 自動滾到底
 
   useEffect(() => {
     scrollToBottom();
   }, [messages, currentMessage, currentUserMessage]);
+  // 只要以下任一變化：新 message, AI 輸出更新, 使用者輸入更新, 就滾到底
 
   const isEmpty = messages.length === 0 && !currentMessage && !currentUserMessage;
 
@@ -60,6 +63,7 @@ const Transcript = ({ messages, currentMessage, currentUserMessage }: Transcript
       ))}
 
       {/* User Streaming Message */}
+      {/* 即時使用者輸入 */}
       {currentUserMessage && (
         <div className="transcript-message transcript-message-user">
           <div className="transcript-bubble transcript-bubble-user">
@@ -70,6 +74,7 @@ const Transcript = ({ messages, currentMessage, currentUserMessage }: Transcript
       )}
 
       {/* Assistant Streaming Message */}
+      {/* 即時 AI 回應 */}
       {currentMessage && (
         <div className="transcript-message transcript-message-assistant">
           <div className="transcript-bubble transcript-bubble-assistant">

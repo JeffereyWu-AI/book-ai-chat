@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
     images: { remotePatterns: [
             { protocol: 'https', hostname: 'covers.openlibrary.org' },
             // 允許載入你部署在 Vercel Blob Storage 上的圖片（例如使用者上傳的封面圖）。
-            { protocol: 'https', hostname: 'lspfdyhgsrgsxcju.public.blob.vercel-storage.com' },
+            { protocol: 'https', hostname: 'l0sxxn82v5lgprww.public.blob.vercel-storage.com' },
         ]}
 };
 

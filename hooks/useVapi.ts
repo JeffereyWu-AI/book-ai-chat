@@ -1,3 +1,12 @@
+// 負責整個「語音 AI 通話系統」的狀態管理、事件處理、時間控制、訊息流與後端 session tracking
+// UI (VapiControls)
+//         ↓
+// useVapi (這個 hook 🔥)
+//         ↓
+// Vapi SDK（語音引擎）
+//         ↓
+// AI 語音服務（LLM + TTS + STT）
+
 'use client';
 
 // Create hooks/useVapi.ts: the core hook. Initializes Vapi SDK, manages call lifecycle (idle, connecting, starting, listening, thinking, speaking), tracks messages array + currentMessage streaming, handles duration timer with maxDuration enforcement, session tracking via server actions
@@ -27,6 +36,7 @@ const TIMER_INTERVAL_MS = 1000;
 const SECONDS_PER_MINUTE = 60;
 const TIME_WARNING_THRESHOLD = 60; // Show warning when this many seconds remain
 
+// Vapi 初始化
 let vapi: InstanceType<typeof Vapi>;
 function getVapi() {
     if (!vapi) {
@@ -34,11 +44,19 @@ function getVapi() {
             throw new Error('NEXT_PUBLIC_VAPI_API_KEY environment variable is not set');
         }
         vapi = new Vapi(VAPI_API_KEY);
-    }
+    }   // 避免每次 render 都 new 一個語音引擎
     return vapi;
 }
 
 export type CallStatus = 'idle' | 'connecting' | 'starting' | 'listening' | 'thinking' | 'speaking';
+// 完整語音 lifecycle：
+// idle
+//  → connecting
+//  → starting (AI first message)
+//  → listening (user speaks)
+//  → thinking (AI processing)
+//  → speaking (AI responding)
+
 
 export function useVapi(book: IBook) {
     const { userId } = useAuth();
@@ -52,13 +70,16 @@ export function useVapi(book: IBook) {
     const [limitError, setLimitError] = useState<string | null>(null);
     const [isBillingError, setIsBillingError] = useState(false);
 
-    const timerRef = useRef<NodeJS.Timeout | null>(null);
-    const startTimeRef = useRef<number | null>(null);
-    const sessionIdRef = useRef<string | null>(null);
-    const isStoppingRef = useRef(false);
+    const timerRef = useRef<NodeJS.Timeout | null>(null);   // 儲存 setInterval 的 timer ID
+    const startTimeRef = useRef<number | null>(null);   // 記錄語音 session 開始時間
+    const sessionIdRef = useRef<string | null>(null);   // 儲存 backend 的 session ID（用來 tracking）
+    const isStoppingRef = useRef(false);    // 停止狀態 flag
+    // 用來在 React render 之外保存「持久狀態」，避免 re-render 影響邏輯（特別是 timer、session、異步事件）
 
     // Keep refs in sync with latest values for use in callbacks
     const maxDurationSeconds = limits?.maxDurationPerSession ? limits.maxDurationPerSession * 60 : (15 * 60);
+    // 根據訂閱限制語音時間
+
     const maxDurationRef = useLatestRef(maxDurationSeconds);
     const durationRef = useLatestRef(duration);
     const voice = book.persona || DEFAULT_VOICE;
@@ -66,7 +87,7 @@ export function useVapi(book: IBook) {
     // Set up Vapi event listeners
     useEffect(() => {
         const handlers = {
-            'call-start': () => {
+            'call-start': () => {   // 發生在：AI 開始通話
                 isStoppingRef.current = false;
                 setStatus('starting'); // AI speaks first, wait for it
                 setCurrentMessage('');
@@ -82,6 +103,8 @@ export function useVapi(book: IBook) {
 
                         // Check duration limit
                         if (newDuration >= maxDurationRef.current) {
+                            // 檢查時間限制
+                            // 超時 → stop + error
                             getVapi().stop();
                             setLimitError(
                                 `Session time limit (${Math.floor(
@@ -137,6 +160,7 @@ export function useVapi(book: IBook) {
                 if (message.type !== 'transcript') return;
 
                 // User finished speaking → AI is thinking
+                // AI 開始思考
                 if (message.role === 'user' && message.transcriptType === 'final') {
                     if (!isStoppingRef.current) {
                         setStatus('thinking');
@@ -145,6 +169,7 @@ export function useVapi(book: IBook) {
                 }
 
                 // Partial user transcript → show real-time typing
+                // 即時輸入, 顯示 typing
                 if (message.role === 'user' && message.transcriptType === 'partial') {
                     setCurrentUserMessage(message.transcript);
                     return;
@@ -162,11 +187,11 @@ export function useVapi(book: IBook) {
                     if (message.role === 'user') setCurrentUserMessage('');
 
                     setMessages((prev) => {
-                        const isDupe = prev.some(
+                        const isDupe = prev.some(   // 避免 duplicate message
                             (m) => m.role === message.role && m.content === message.transcript,
                         );
                         return isDupe ? prev : [...prev, { role: message.role, content: message.transcript }];
-                    });
+                    }); // 加入歷史
                 }
             },
 
@@ -261,7 +286,7 @@ export function useVapi(book: IBook) {
                     author: book.author,
                     bookId: book._id,
                 },
-                voice: {
+                voice: {    // voice config（11labs）
                     provider: '11labs' as const,
                     voiceId: getVoice(voice).id,
                     model: 'eleven_turbo_v2_5' as const,

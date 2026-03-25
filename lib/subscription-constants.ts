@@ -1,3 +1,5 @@
+// 集中定義所有訂閱方案（Plan）及其限制規則，並提供計費週期的時間基準
+
 export const PLANS = {
     FREE: 'free',
     STANDARD: 'standard',
@@ -7,12 +9,13 @@ export const PLANS = {
 export type PlanType = typeof PLANS[keyof typeof PLANS];
 
 export interface PlanLimits {
-    maxBooks: number;
-    maxSessionsPerMonth: number;
-    maxDurationPerSession: number; // in minutes
-    hasSessionHistory: boolean;
+    maxBooks: number;   // 可上傳書本數
+    maxSessionsPerMonth: number;    // 每月可用 session
+    maxDurationPerSession: number; // 每次語音時長（分鐘）
+    hasSessionHistory: boolean; // 是否可查看歷史
 }
 
+// 每個 plan 都要有一組限制
 export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
     [PLANS.FREE]: {
         maxBooks: 1,
@@ -38,3 +41,4 @@ export const getCurrentBillingPeriodStart = (): Date => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
 };
+// 回傳：本月第一天 00:00:00

@@ -1,11 +1,13 @@
+// 一個結合語音輸入、AI 回應、狀態管理與對話紀錄的 UI 控制器
+
 'use client';
 
 import {Mic, MicOff} from "lucide-react";
 import useVapi from "@/hooks/useVapi";
 import {IBook} from "@/types";
 import Image from "next/image";
-import Transcript from "@/components/Transcript";
-import {toast} from "sonner";
+import Transcript from "@/components/Transcript";   // 顯示對話紀錄
+import {toast} from "sonner";   // 顯示錯誤提示
 
 import {useRouter} from "next/navigation";
 import {useEffect} from "react";
@@ -18,7 +20,7 @@ const VapiControls = ({ book }: { book: IBook }) => {
         if (limitError) {
             toast.error(limitError);
             if (isBillingError) {
-                router.push("/subscriptions");
+                router.push("/subscriptions");  // 如果是 billing 問題, 導去付費頁
             } else {
                 router.push("/");
             }
@@ -51,6 +53,7 @@ const VapiControls = ({ book }: { book: IBook }) => {
                 {/* Header Card */}
                 <div className="vapi-header-card">
                     <div className="vapi-cover-wrapper">
+                        {/* 書籍資訊 UI */}
                         <Image
                             src={book.coverURL || "/images/book-placeholder.png"}
                             alt={book.title}
@@ -63,6 +66,7 @@ const VapiControls = ({ book }: { book: IBook }) => {
                             {isActive && (status === 'speaking' || status === 'thinking') && (
                                 <div className="absolute inset-0 rounded-full bg-white animate-ping opacity-75" />
                             )}
+                            {/* 當 AI 在回應： 顯示「脈衝動畫」*/}
                             <button
                                 onClick={isActive ? stop : start}
                                 disabled={status === 'connecting'}
@@ -94,11 +98,13 @@ const VapiControls = ({ book }: { book: IBook }) => {
                             <div className="vapi-status-indicator">
                                 <span className="vapi-status-text">Voice: {book.persona || "Daniel"}</span>
                             </div>
+                            {/* 顯示語音角色 */}
 
                             <div className="vapi-status-indicator">
                                 <span className="vapi-status-text">
                                     {formatDuration(duration)}/{formatDuration(maxDurationSeconds)}
                                 </span>
+                                {/* 顯示使用時間 */}
                             </div>
                         </div>
                     </div>
@@ -112,6 +118,7 @@ const VapiControls = ({ book }: { book: IBook }) => {
                         currentUserMessage={currentUserMessage}
                     />
                 </div>
+                {/* 顯示：歷史對話, AI 即時輸出, 用戶語音轉文字 */}
             </div>
             </div>
         </>
